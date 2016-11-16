@@ -17,6 +17,14 @@ class Inhibitation():
 
     def stop(self):
         print(subprocess.Popen(["/usr/bin/qdbus", "org.freedesktop.PowerManagement", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit.UnInhibit", self.__cookie], stdout=subprocess.PIPE).communicate()[0])
+        self.__cookie = -1
+
+    def is_started(self):
+        if self.__cookie == -1:
+            return False
+        else:
+            return True
+        
 
 class TrayIcon(QSystemTrayIcon):
     def __init__(self, parent=None):
@@ -26,7 +34,7 @@ class TrayIcon(QSystemTrayIcon):
 
         QSystemTrayIcon.__init__(self, parent=None)
         self.setIcon(self.__non_inhibited_icon)
-        right_menu = RightClicked()
+        right_menu = RightClicked(self.quit)
         self.setContextMenu(right_menu)
         self.setToolTip("Inhibit me ...")
         self.activated.connect(self.onActivation)
@@ -44,14 +52,20 @@ class TrayIcon(QSystemTrayIcon):
                 self.setIcon(self.__inhibited_icon) 
                 self.inhibit.start()
 
+    def quit(self):
+        if self.inhibit.is_started() is True:
+            self.inhibit.stop()
+        QApplication.exit(0)
+
 class RightClicked(QMenu):
-    def __init__(self, parent=None):
+    def __init__(self, quit_fn, parent=None):
         QMenu.__init__(self, parent=None)
         quit = QAction("Exit", self)
-        quit.triggered.connect(lambda: QApplication.exit(0))
+        quit.triggered.connect(quit_fn)
 
         # self.addSeparator()
         self.addAction(quit)
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
